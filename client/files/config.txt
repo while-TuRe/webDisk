@@ -1,0 +1,8 @@
+[network]
+ip=127.0.0.1
+port=4323
+reconnectLimit=20
+
+[local]
+local_file=./files/local_files.txt
+log_file=./files/log.txt
