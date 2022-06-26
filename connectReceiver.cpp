@@ -108,6 +108,11 @@ void WebFrame::init()
     }
 }
 
+/*
+main loop.
+accept client and its service type of request.
+when got the service type, the fd will be removed from epoll.
+*/
 void WebFrame::run()
 {
     epoll_event events[epoll_size];
