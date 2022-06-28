@@ -10,7 +10,7 @@ def loadConfig(config_path):
     
 
 loadConfig('./files/config.txt')
-# print(config)
+print(config)
 
 
 log = open(config['local']['log_file'],mode='a')
