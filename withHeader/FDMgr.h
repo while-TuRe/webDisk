@@ -1,3 +1,5 @@
+#pragma once
+
 #include <map>
 #include <queue>
 #include <mutex>
@@ -22,7 +24,7 @@ private:
 
     queue<int> *getFdQueue(thread::id &t_id);
 
-    void addFd(thread::id &&t_id, int fd);
+    void addFd(thread::id &t_id, int fd);
 
     mutex &getMutex();
 

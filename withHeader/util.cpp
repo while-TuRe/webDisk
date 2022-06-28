@@ -1,5 +1,6 @@
 #include<mutex>
 
+#include"config.h"
 #include"util.h"
 
 recursive_mutex mtx;
@@ -27,3 +28,4 @@ void writeLog(const T& first_log, const Types&... rest_log) {
 	writeLog(rest_log...);
 	mtx.unlock();
 }
+

@@ -17,8 +17,10 @@
 #include <condition_variable>
 #include <tuple>
 
-#include "connectReceiver.h"
-
+#include "webFrame.h"
+#include "FDMgr.h"
+#include "config.h"
+#include "util.h"
 
 using namespace std;
 using namespace std::this_thread;
@@ -30,6 +32,7 @@ void WebFrame::startService(int client_fd, string request_type)
         writeLog(getNowTime(), " request type not found, type is ", request_type);
         return;
     }
+    fd_mgr.addFd(transaction_threads[request_type], client_fd);
 }
 
 WebFrame::WebFrame()
@@ -137,7 +140,7 @@ void WebFrame::run()
         for (int i = 0; i < readable_fd_num; i++)
         {
             // client comes to connect
-            if (events[i].data.fd = accept_client_fd)
+            if (events[i].data.fd == accept_client_fd)
             {
                 sockaddr_in client_addr;
                 socklen_t len = sizeof(client_addr);
@@ -147,6 +150,7 @@ void WebFrame::run()
                     writeLog(getNowTime(), " accept client error, errno:", strerror(errno));
                     continue;
                 }
+
                 setNonblock(client_fd);
                 // wait client sending type message of request
                 epoll_event event;
@@ -191,3 +195,15 @@ void WebFrame::run()
         }
     }
 }
+
+
+WebFrame web_frame;
+
+
+// int main()
+// {
+//     WebFrame web_frame;
+
+//     web_frame.run();
+//     return 0;
+// }

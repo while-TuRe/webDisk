@@ -2,9 +2,11 @@
 #include <queue>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
+#include <condition_variable>
 
-#include "FDMgr.h"
 #include "util.h"
+#include "FDMgr.h"
 
 using namespace std;
 using namespace std::this_thread;
@@ -27,7 +29,7 @@ queue<int> *FDMgr::getFdQueue(thread::id &t_id)
     return q;
 }
 
-void FDMgr::addFd(thread::id &&t_id, int fd)
+void FDMgr::addFd(thread::id &t_id, int fd)
 {
     queue<int> *q = getFdQueue(t_id);
     if (q == nullptr)
@@ -43,6 +45,7 @@ void FDMgr::addFd(thread::id &&t_id, int fd)
     }
     queue_mtx[t_id]->lock();
     q->push(fd);
+    get<0>(condition_lock[t_id])->notify_one();
     queue_mtx[t_id]->unlock();
 }
 

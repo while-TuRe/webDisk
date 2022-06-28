@@ -1,51 +1,29 @@
-# target=main
-# src=$(wildcard *.cpp)
-# src_o=$(patsubst %.cpp, %.o, $(src))
+TAR= main
 
-# include=-I./
-# lib=-lpthread
+.PHONY: all clean
 
-# CC=g++ -std=c++11
-
-# .PHONY:all
-# all:$(target)
-
-# $(target):$(src_o)
-# 	$(CC) -o $@ $(filter $@.o, $(src_o)) $(lib) $(include)
+CC = g++
+VERSION = -std=c++14
+CFLAG = -c -Wall $(VERSION)
 
 
-# vpath %.cpp
-# %.o:%.cpp
-# 	$(CC) -c $^
+INC_PATH = ./
+OBJ_PATH = ./objs/
+SOURCE=$(wildcard *.cpp)
+OBJ=$(patsubst %.cpp,$(OBJ_PATH)%.o,$(SOURCE))
 
-# .PHONY:clean
-# clean:
-# 	rm -f *.o $(target)
-
+HEADER = $(wildcard $(INC_PATH)*.h)
 
 
+all:$(TAR)
+	
+
+$(TAR):$(OBJ)
+	$(CC) -Wall $(VERSION) -I$(INC_PATH) -o $@  $^ -lpthread 
 
 
-target=main
-src=$(wildcard *.cpp)
-# include_src=myDaemon.cpp menu.cpp socket.cpp
-# src+=$(include_src)
-src_o=$(patsubst %.cpp, %.o, $(src))
-include=-I./ -lpthread
-other_src_dir=./
+$(OBJ):$(OBJ_PATH)%.o:%.cpp $(HEADER)
+	$(CC) $(CFLAG) -I$(INC_PATH) -o $@ $<
 
-CC=g++ -std=c++11
-
-.PHONY:all
-all:$(target)
-
-$(target):$(src_o)
-	$(CC) -o $@ $(filter $@.o, $(src_o)) $(patsubst %.cpp, %.o, $(src)) $(include)
-
-vpath %.cpp $(other_src_dir)
-%.o:%.cpp
-	$(CC) -c $^
-
-.PHONY:clean
 clean:
-	rm -f *.o $(target)
+	rm -f $(TAR) $(OBJ)

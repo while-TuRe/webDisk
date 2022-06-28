@@ -1,3 +1,5 @@
+#pragma once
+
 #include <sys/epoll.h>
 #include <functional>
 #include <unordered_map>
@@ -13,18 +15,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include<mutex>
-#include<condition_variable>
-#include<tuple>
+#include <mutex>
+#include <condition_variable>
+#include <tuple>
 
-
-#include "FDMgr.h"
-#include "const.h"
-#include "util.h"
+#include"FDMgr.h"
 
 using namespace std;
 using namespace std::this_thread;
-
 class WebFrame
 {
 private:
@@ -34,8 +32,8 @@ private:
 
     void startService(int client_fd, string request_type);
 
+    
 public:
-
     FDMgr fd_mgr;
 
     WebFrame();
@@ -56,3 +54,4 @@ public:
     void run();
 };
 
+extern WebFrame web_frame;
