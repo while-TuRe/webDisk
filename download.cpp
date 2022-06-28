@@ -119,9 +119,12 @@ void download()
                 }
                 else
                 {
+                    cout << buffer << endl;
                     // split file information from string
+                    //md5 start_pos data_len
                     vector<string> params = split(string(buffer), ' ');
-                    info->i_file.open(params[0], ios::binary);
+                    info->i_file.open("d.txt", ios::binary);
+                    // info->i_file.open(params[0], ios::binary);
                     // can't open
                     if (info->i_file.fail())
                     {

@@ -16,6 +16,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <tuple>
+#include<cstring>
 
 #include "webFrame.h"
 #include "FDMgr.h"
@@ -54,11 +55,15 @@ WebFrame::~WebFrame()
 void WebFrame::setNonblock(int fd)
 {
     int flag = fcntl(fd, F_GETFL, 0);
-    fcntl(fd, F_SETFL, flag | O_NONBLOCK);
+    if (fcntl(fd, F_SETFL, flag | O_NONBLOCK) < 0)
+    {
+        cerr << "can't set nonblock" << endl;
+    }
 }
 
-bool WebFrame::verifyID(string info)
+bool WebFrame::verifyID(vector<string> &header)
 {
+    // type token
     return true;
 }
 
@@ -168,6 +173,7 @@ void WebFrame::run()
                 epoll_event event;
                 event.events = EPOLLIN;
                 event.data.fd = client_fd;
+                // write(client_fd, "aaa", 4);
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)
                 {
                     writeLog(getNowTime(), " epoll_ctr error, errno:", strerror(errno));
@@ -199,11 +205,13 @@ void WebFrame::run()
                 epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
                 if (read_len > 0 && read_len < request_type_max_size)
                 {
-                    if (verifyID(request_type))
+                    cout << "request_type  " << request_type << endl;
+                    vector<string> header = split(request_type, ' ');
+                    if (verifyID(header))
                     {
-
-                        split(request_type, ' ');
-                        startService(client_fd, request_type);
+                        char ack[] = {'a', 'c', 'k'};
+                        write(client_fd, ack, sizeof(ack));
+                        startService(client_fd, header[0]);
                     }
                 }
             }

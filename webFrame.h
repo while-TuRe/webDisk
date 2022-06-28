@@ -19,7 +19,7 @@
 #include <condition_variable>
 #include <tuple>
 
-#include"FDMgr.h"
+#include "FDMgr.h"
 
 using namespace std;
 using namespace std::this_thread;
@@ -34,14 +34,12 @@ private:
 
     void setNonblock(int fd);
 
-    bool verifyID(string info);
+    bool verifyID(vector<string> &header);
 
 public:
-
     WebFrame();
 
     ~WebFrame();
-
 
     void route(string url, function<void()> func);
 
