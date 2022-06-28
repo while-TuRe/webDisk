@@ -1,21 +1,29 @@
-target=webDisk
-src=$(wildcard *.cpp)
-src_o=$(patsubst %.cpp, %.o, $(src))
-include=-lpthread
+TAR= main
 
-CC=g++ -std=c++11
+.PHONY: all clean
 
-.PHONY:all
-all:$(target)
-
-$(target):$(src_o)
-	$(CC) -o $@ $(filter $@.o, $(src_o)) $(include)
+CC = g++ -g
+VERSION = -std=c++14
+CFLAG = -c -Wall $(VERSION)
 
 
-vpath %.cpp
-%.o:%.cpp
-	$(CC) -c $^
+INC_PATH = ./
+OBJ_PATH = ./objs/
+SOURCE=$(wildcard *.cpp)
+OBJ=$(patsubst %.cpp,$(OBJ_PATH)%.o,$(SOURCE))
 
-.PHONY:clean
+HEADER = $(wildcard $(INC_PATH)*.h)
+
+
+all:$(TAR)
+	
+
+$(TAR):$(OBJ)
+	$(CC) -Wall $(VERSION) -I$(INC_PATH) -o $@  $^ -lpthread 
+
+
+$(OBJ):$(OBJ_PATH)%.o:%.cpp $(HEADER)
+	$(CC) $(CFLAG) -I$(INC_PATH) -o $@ $<
+
 clean:
-	rm -f *.o $(target)
+	rm -f $(TAR) $(OBJ)

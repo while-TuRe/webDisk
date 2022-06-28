@@ -1,5 +1,9 @@
 #include<mutex>
+#include<vector>
+#include<sstream>
+#include<string>
 
+#include"config.h"
 #include"util.h"
 
 recursive_mutex mtx;
@@ -20,10 +24,18 @@ void writeLog() {
 	log_file << endl;
 }
 
-template <typename T, typename... Types>
-void writeLog(const T& first_log, const Types&... rest_log) {
-	mtx.lock();
-	log_file << first_log;
-	writeLog(rest_log...);
-	mtx.unlock();
+
+vector<string> split(const string &s, const char seperator)
+{
+
+    stringstream ss(s);
+    string item;
+    vector<string> v;
+
+    while (getline(ss, item, seperator))
+    {
+        v.push_back(item);
+    }
+    return v;
 }
+

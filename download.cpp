@@ -19,7 +19,8 @@
 #include <string>
 #include <vector>
 
-#include"download.h"
+#include"FDMgr.h"
+#include "download.h"
 #include "config.h"
 #include "util.h"
 
@@ -32,53 +33,38 @@ struct FDInfo
     int data_len;
 };*/
 
-
-    DownloadHelper::DownloadHelper() : seperator(' ')
-    {
-        epoll_fd = epoll_create(epoll_size);
-        if (epoll_fd < 0)
-        {
-            writeLog(getNowTime(), "create epoll error in download");
-            return;
-        }
-        fd_cnt = 0;
-    }
-
-    DownloadHelper::~DownloadHelper()
-    {
-        close(epoll_fd);
-    }
-
-    void DownloadHelper::closeDownloadFd(FDInfo *info)
-    {
-        fd_cnt--;
-        epoll_ctl(epoll_fd, EPOLL_CTL_DEL, info->fd, nullptr);
-        close(info->fd);
-        info->i_file.close();
-        delete info;
-    }
-
-
-vector<string> split(const string &s, const char seperator)
+DownloadHelper::DownloadHelper() : seperator(' ')
 {
-
-    stringstream ss(s);
-    string item;
-    vector<string> v;
-
-    while (getline(ss, item, seperator))
+    epoll_fd = epoll_create(epoll_size);
+    if (epoll_fd < 0)
     {
-        v.push_back(item);
+        writeLog(getNowTime(), "create epoll error in download");
+        return;
     }
-    return v;
+    fd_cnt = 0;
+}
+
+DownloadHelper::~DownloadHelper()
+{
+    close(epoll_fd);
+}
+
+void DownloadHelper::closeDownloadFd(FDInfo *info)
+{
+    fd_cnt--;
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, info->fd, nullptr);
+    close(info->fd);
+    info->i_file.close();
+    delete info;
+    cout << "close fd" << endl;
 }
 
 void download()
 {
     DownloadHelper download_helper;
-    FDMgr &fd_mgr = web_frame.fd_mgr;
     epoll_event events[epoll_size];
 
+    // take out all fds in each round of service
     while (fd_mgr.getFdNum() > 0)
     {
         epoll_event event;
@@ -95,18 +81,22 @@ void download()
         download_helper.fd_cnt++;
     }
 
-    while (download_helper.fd_cnt)
+    while (download_helper.fd_cnt > 0)
     {
+        // block service, so it won't serve fds in next round unitl 
+        // its service ends in this round.
         int event_num = epoll_wait(download_helper.epoll_fd, events, epoll_size, -1);
+        // read/write sharing
         char buffer[buffer_size];
         for (int i = 0; i < event_num; i++)
         {
             memset(buffer, 0, buffer_size);
             FDInfo *info = reinterpret_cast<FDInfo *>(events[i].data.ptr);
-
+            // get infomation about file to be download
             if (events[i].events & EPOLLIN)
             {
                 int client_fd = info->fd;
+                // maybe it's not required
                 epoll_ctl(download_helper.epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
 
                 int read_len = read(client_fd, buffer, buffer_size);
@@ -129,8 +119,10 @@ void download()
                 }
                 else
                 {
+                    // split file information from string
                     vector<string> params = split(string(buffer), ' ');
                     info->i_file.open(params[0], ios::binary);
+                    // can't open
                     if (info->i_file.fail())
                     {
                         writeLog(getNowTime(), " file that client(fd:", client_fd, ") downloads can't open");
@@ -138,6 +130,7 @@ void download()
                     }
                     info->start_pos = atoi(params[1].c_str());
                     info->data_len = atoi(params[2].c_str());
+                    // download file from specified location
                     info->i_file.seekg(info->start_pos, ios::beg);
                     epoll_event event;
                     event.events = EPOLLOUT;
@@ -145,12 +138,15 @@ void download()
                     epoll_ctl(download_helper.epoll_fd, EPOLL_CTL_ADD, client_fd, &event);
                 }
             }
+            // download file
             else
             {
+                // read fully or partly 
                 int read_len = min(buffer_size, info->data_len);
                 info->i_file.read(buffer, read_len);
                 int write_len = write(info->fd, buffer, read_len);
-                // I don't know what's the case when write_len < 0 !!!
+                cout << "write len:" << write_len << endl;
+                // I don't know what's the case when write_len < 0
                 if (write_len <= 0)
                 {
                     // buffer is full
@@ -184,4 +180,3 @@ void download()
         }
     }
 }
-

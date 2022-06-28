@@ -32,15 +32,16 @@ private:
 
     void startService(int client_fd, string request_type);
 
-    
+    void setNonblock(int fd);
+
+    bool verifyID(string info);
+
 public:
-    FDMgr fd_mgr;
 
     WebFrame();
 
     ~WebFrame();
 
-    void setNonblock(int fd);
 
     void route(string url, function<void()> func);
 

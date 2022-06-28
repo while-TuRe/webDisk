@@ -28,7 +28,7 @@
 struct FDInfo
 {
     int fd;
-    ifstream i_file;
+    ifstream i_file;  // file to download
     int start_pos;
     int data_len;
 };
@@ -38,6 +38,7 @@ class DownloadHelper
 public:
     int epoll_fd;
     const char seperator;
+    // whhen it decreases to 0, this service round ends.
     int fd_cnt;
 
     DownloadHelper();
@@ -47,6 +48,5 @@ public:
     void closeDownloadFd(FDInfo *info);
 };
 
-vector<string> split(const string &s, const char seperator);
 
 void download();

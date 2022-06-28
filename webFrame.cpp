@@ -25,6 +25,7 @@
 using namespace std;
 using namespace std::this_thread;
 
+// add fd to corresponding fd_queue
 void WebFrame::startService(int client_fd, string request_type)
 {
     if (transaction_threads.find(request_type) == transaction_threads.end())
@@ -56,6 +57,11 @@ void WebFrame::setNonblock(int fd)
     fcntl(fd, F_SETFL, flag | O_NONBLOCK);
 }
 
+bool WebFrame::verifyID(string info)
+{
+    return true;
+}
+
 void WebFrame::route(string url, function<void()> func)
 {
     if (transaction_threads.find(url) != transaction_threads.end())
@@ -72,21 +78,27 @@ void WebFrame::route(string url, function<void()> func)
              {
             transaction_threads[url] = get_id();
             cout << "create thread id:" << get_id() << endl;
-
+            // thread will sleep on its first come.
             while (true)
             {
                 unique_lock<mutex> lock(fd_mgr.getMutex());
                 cout << get_id() << " may sleep" << endl;
                 auto lock_tuple = fd_mgr.getLockTuple();
+                // if there is no fd, go to sleep
                 (get<0>(lock_tuple))->wait(lock, [&]() -> bool
                     { return fd_mgr.getFdNum() > 0; });
+                cout << "sleeping" << endl;
                 cout << get_id() << " awake" << endl;
                 func();
             } });
 
+    cout << "thread detach" << endl;
     t.detach();
 }
 
+/*
+initiate epoll and server_addr
+*/
 void WebFrame::init()
 {
     accept_client_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -186,7 +198,14 @@ void WebFrame::run()
                 // the rest of data will be read in the corresponding service.
                 epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
                 if (read_len > 0 && read_len < request_type_max_size)
-                    startService(client_fd, request_type);
+                {
+                    if (verifyID(request_type))
+                    {
+
+                        split(request_type, ' ');
+                        startService(client_fd, request_type);
+                    }
+                }
             }
             else
             {
@@ -196,9 +215,7 @@ void WebFrame::run()
     }
 }
 
-
 WebFrame web_frame;
-
 
 // int main()
 // {
