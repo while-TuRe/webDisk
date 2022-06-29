@@ -3,8 +3,8 @@ TAR= main
 .PHONY: all clean
 
 CC = g++ -g
-VERSION = -std=c++14
-CFLAG = -c -Wall $(VERSION)
+VERSION = -std=c++11
+CFLAG = -c $(VERSION)
 
 
 INC_PATH = ./

@@ -16,7 +16,9 @@
 #include <mutex>
 #include <condition_variable>
 #include <tuple>
-#include<cstring>
+#include <cstring>
+#include <signal.h>
+#include <sys/socket.h>
 
 #include "webFrame.h"
 #include "FDMgr.h"
@@ -34,6 +36,7 @@ void WebFrame::startService(int client_fd, string request_type)
         writeLog(getNowTime(), " request type not found, type is ", request_type);
         return;
     }
+    
     fd_mgr.addFd(transaction_threads[request_type], client_fd);
 }
 
@@ -54,6 +57,7 @@ WebFrame::~WebFrame()
 
 void WebFrame::setNonblock(int fd)
 {
+    cout << "set " <<fd << " nonblock" << endl;
     int flag = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flag | O_NONBLOCK) < 0)
     {
@@ -63,8 +67,15 @@ void WebFrame::setNonblock(int fd)
 
 bool WebFrame::verifyID(vector<string> &header)
 {
-    // type token
-    return true;
+    if (header[0] == "register")
+        return true;
+    // (type, token)
+    else
+    {
+        // TO-DO
+
+        return true;
+    }
 }
 
 void WebFrame::route(string url, function<void()> func)
@@ -82,22 +93,19 @@ void WebFrame::route(string url, function<void()> func)
     thread t([&]
              {
             transaction_threads[url] = get_id();
-            cout << "create thread id:" << get_id() << endl;
+            cout << "create thread id:" << get_id() << " type is " << url << endl;
             // thread will sleep on its first come.
             while (true)
             {
                 unique_lock<mutex> lock(fd_mgr.getMutex());
-                cout << get_id() << " may sleep" << endl;
                 auto lock_tuple = fd_mgr.getLockTuple();
                 // if there is no fd, go to sleep
                 (get<0>(lock_tuple))->wait(lock, [&]() -> bool
                     { return fd_mgr.getFdNum() > 0; });
-                cout << "sleeping" << endl;
                 cout << get_id() << " awake" << endl;
                 func();
             } });
 
-    cout << "thread detach" << endl;
     t.detach();
 }
 
@@ -110,6 +118,13 @@ void WebFrame::init()
     if (accept_client_fd < 0)
     {
         cerr << "acquire server fd error, errno:" << strerror(errno) << endl;
+        exit(-1);
+    }
+
+    int reuse = 1;
+    if (setsockopt(accept_client_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
+    {
+        cerr << "setsockopet error" << endl;
         exit(-1);
     }
 
@@ -139,6 +154,8 @@ void WebFrame::init()
         cerr << "add accept_client_fd to epoll error, errno:" << strerror(errno) << endl;
         exit(-1);
     }
+
+    signal(SIGPIPE, [](int sig) {});
 }
 
 /*
@@ -167,18 +184,13 @@ void WebFrame::run()
                     writeLog(getNowTime(), " accept client error, errno:", strerror(errno));
                     continue;
                 }
-
+                auto info = getPeerIPWithPort(client_fd);
+                writeLog(getNowTime(), " ", get<0>(info), ":", get<1>(info), " connect");
                 setNonblock(client_fd);
                 // wait client sending type message of request
                 epoll_event event;
                 event.events = EPOLLIN;
                 event.data.fd = client_fd;
-
-
-                // write(client_fd, "aaa", 4);
-
-
-                
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)
                 {
                     writeLog(getNowTime(), " epoll_ctr error, errno:", strerror(errno));
@@ -210,17 +222,22 @@ void WebFrame::run()
                 epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
                 if (read_len > 0 && read_len < request_type_max_size)
                 {
-                    cout << "request_type  " << request_type << endl;
+                    writeLog(getNowTime(), " request type of client:", string(request_type));
                     vector<string> header = split(request_type, ' ');
                     if (verifyID(header))
                     {
                         char ack[] = {'a', 'c', 'k'};
-                        
                         write(client_fd, ack, sizeof(ack));
                         startService(client_fd, header[0]);
                     }
+                    else
+                    {
+                        string deny("authentication failed");
+                        write(client_fd, deny.c_str(), deny.length());
+                    }
                 }
             }
+            // unknown event type
             else
             {
                 cerr << "unknown event type" << endl;
@@ -230,11 +247,3 @@ void WebFrame::run()
 }
 
 WebFrame web_frame;
-
-// int main()
-// {
-//     WebFrame web_frame;
-
-//     web_frame.run();
-//     return 0;
-// }

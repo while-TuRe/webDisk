@@ -3,6 +3,7 @@
 #include <string>
 #include <sys/time.h>
 #include<fstream>
+#include<vector>
 
 #include"config.h"
 using namespace std;
@@ -31,3 +32,5 @@ void writeLog(const T& first_log, const Types&... rest_log) {
 	mtx.unlock();
 }
 
+
+tuple<string, int> getPeerIPWithPort(int fd);

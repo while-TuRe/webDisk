@@ -7,18 +7,18 @@
 #include <fstream>
 #include <unordered_map>
 
-#include"FDMgr.h"
+#include "FDMgr.h"
 #include "download.h"
 #include "config.h"
 #include "util.h"
 
 /*
-struct FDInfo
+struct DownloadInfo
 {
     int fd;
     ifstream i_file;
     int start_pos;
-    int data_len;
+    int end_pos;
 };*/
 
 DownloadHelper::DownloadHelper() : seperator(' ')
@@ -37,7 +37,7 @@ DownloadHelper::~DownloadHelper()
     close(epoll_fd);
 }
 
-void DownloadHelper::closeDownloadFd(FDInfo *info)
+void DownloadHelper::closeDownloadFd(DownloadInfo *info)
 {
     fd_cnt--;
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, info->fd, nullptr);
@@ -57,10 +57,10 @@ void download()
     {
         epoll_event event;
         event.events = EPOLLIN;
-        FDInfo *info = new (nothrow) FDInfo;
+        DownloadInfo *info = new (nothrow) DownloadInfo;
         info->fd = fd_mgr.popFront();
         event.data.ptr = info;
-        if (epoll_ctl(download_helper.epoll_fd, EPOLL_CTL_ADD, event.data.fd, &event) < 0)
+        if (epoll_ctl(download_helper.epoll_fd, EPOLL_CTL_ADD, info->fd, &event) < 0)
         {
             writeLog(getNowTime(), " epoll_ctr error, errno:", strerror(errno));
             download_helper.closeDownloadFd(info);
@@ -69,17 +69,17 @@ void download()
         download_helper.fd_cnt++;
     }
 
+    // read/write sharing
+    char *buffer = new (nothrow) char[buffer_size];
     while (download_helper.fd_cnt > 0)
     {
-        // block service, so it won't serve fds in next round unitl 
+        // block service, so it won't serve fds in next round unitl
         // its service ends in this round.
         int event_num = epoll_wait(download_helper.epoll_fd, events, epoll_size, -1);
-        // read/write sharing
-        char buffer[buffer_size];
         for (int i = 0; i < event_num; i++)
         {
             memset(buffer, 0, buffer_size);
-            FDInfo *info = reinterpret_cast<FDInfo *>(events[i].data.ptr);
+            DownloadInfo *info = reinterpret_cast<DownloadInfo *>(events[i].data.ptr);
             // get infomation about file to be download
             if (events[i].events & EPOLLIN)
             {
@@ -88,6 +88,7 @@ void download()
                 epoll_ctl(download_helper.epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
 
                 int read_len = read(client_fd, buffer, buffer_size);
+                // read error
                 if (read_len < 0)
                 {
                     writeLog(getNowTime(), " read request error, errno:", strerror(errno));
@@ -105,14 +106,16 @@ void download()
                     writeLog(getNowTime(), "client(fd:", client_fd, ") send invalid file type, it's too long");
                     download_helper.closeDownloadFd(info);
                 }
+                // get it
                 else
                 {
-                    cout << buffer << endl;
                     // split file information from string
-                    //md5 start_pos data_len
+                    // (md5, start_pos, end_pos)
                     vector<string> params = split(string(buffer), ' ');
-                    info->i_file.open("main", ios::binary);
+
+                    info->i_file.open("webrtc.log", ios::binary);
                     // info->i_file.open(params[0], ios::binary);
+
                     // can't open
                     if (info->i_file.fail())
                     {
@@ -120,7 +123,7 @@ void download()
                         download_helper.closeDownloadFd(info);
                     }
                     info->start_pos = atoi(params[1].c_str());
-                    info->data_len = atoi(params[2].c_str());
+                    info->end_pos = atoi(params[2].c_str()) + info->start_pos;
                     // download file from specified location
                     info->i_file.seekg(info->start_pos, ios::beg);
                     epoll_event event;
@@ -132,12 +135,10 @@ void download()
             // download file
             else
             {
-                // read fully or partly 
-                int read_len = min(buffer_size, info->data_len);
+                // read fully or partly
+                int read_len = min(buffer_size, info->end_pos - info->start_pos);
                 info->i_file.read(buffer, read_len);
                 int write_len = write(info->fd, buffer, read_len);
-                cout << "write len:" << write_len << endl;
-                // I don't know what's the case when write_len < 0
                 if (write_len <= 0)
                 {
                     // buffer is full
@@ -146,23 +147,27 @@ void download()
                         info->i_file.seekg(-read_len, ios::cur);
                     }
                     // server has closed
-                    else if (errno == EPIPE || errno == ENOENT)
+                    else if (errno == EPIPE || errno == ENOENT || errno == ECONNRESET)
                     {
                         download_helper.closeDownloadFd(info);
                     }
                     else
                     {
                         writeLog(getNowTime(), " send to client, errno has an unknown errno:", strerror(errno));
-                    }
-                    if (write_len == -1)
-                    {
-                        writeLog(getNowTime(), "send to client write_len is -1, errno:", strerror(errno));
+                        download_helper.closeDownloadFd(info);
                     }
                 }
                 else
                 {
-                    info->data_len -= write_len;
-                    if (info->data_len == 0)
+                    writeLog(getNowTime(), " write to ", info->fd, "(fd) ", write_len, " bytes.");
+                    info->start_pos += write_len;
+                    if (info->i_file.fail())
+                    {
+                        info->i_file.clear();
+                    }
+                    info->i_file.seekg(info->start_pos, ios::beg);
+                    // send all successfully, close fd.
+                    if (info->start_pos >= info->end_pos)
                     {
                         download_helper.closeDownloadFd(info);
                     }
@@ -170,4 +175,6 @@ void download()
             }
         }
     }
+
+    delete[] buffer;
 }

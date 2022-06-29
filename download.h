@@ -5,12 +5,12 @@
 #include <fstream>
 
 
-struct FDInfo
+struct DownloadInfo
 {
     int fd;
     ifstream i_file;  // file to download
     int start_pos;
-    int data_len;
+    int end_pos;
 };
 
 class DownloadHelper
@@ -25,7 +25,7 @@ public:
 
     ~DownloadHelper();
 
-    void closeDownloadFd(FDInfo *info);
+    void closeDownloadFd(DownloadInfo *info);
 };
 
 
