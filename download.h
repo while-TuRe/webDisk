@@ -1,29 +1,9 @@
 #pragma once
 
 #include <sys/epoll.h>
-#include <functional>
-#include <unordered_map>
-#include <thread>
-
-#include <iostream>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <fstream>
-#include <unordered_map>
-#include <sstream>
-#include <string>
-#include <vector>
 
-#include "webFrame.h"
-#include "config.h"
-#include "util.h"
 
 struct FDInfo
 {

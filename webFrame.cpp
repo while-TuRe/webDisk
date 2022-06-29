@@ -173,7 +173,12 @@ void WebFrame::run()
                 epoll_event event;
                 event.events = EPOLLIN;
                 event.data.fd = client_fd;
+
+
                 // write(client_fd, "aaa", 4);
+
+
+                
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event) < 0)
                 {
                     writeLog(getNowTime(), " epoll_ctr error, errno:", strerror(errno));
@@ -210,6 +215,7 @@ void WebFrame::run()
                     if (verifyID(header))
                     {
                         char ack[] = {'a', 'c', 'k'};
+                        
                         write(client_fd, ack, sizeof(ack));
                         startService(client_fd, header[0]);
                     }

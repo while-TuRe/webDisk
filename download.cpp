@@ -1,23 +1,11 @@
 #include <sys/epoll.h>
-#include <functional>
-#include <unordered_map>
-#include <thread>
-
 #include <iostream>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/time.h>
 #include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <fstream>
 #include <unordered_map>
-#include <sstream>
-#include <string>
-#include <vector>
 
 #include"FDMgr.h"
 #include "download.h"
@@ -123,7 +111,7 @@ void download()
                     // split file information from string
                     //md5 start_pos data_len
                     vector<string> params = split(string(buffer), ' ');
-                    info->i_file.open("d.txt", ios::binary);
+                    info->i_file.open("main", ios::binary);
                     // info->i_file.open(params[0], ios::binary);
                     // can't open
                     if (info->i_file.fail())
