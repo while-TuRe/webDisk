@@ -2,13 +2,15 @@
 #include <unistd.h>
 #include <errno.h>
 #include <cstring>
-#include<iostream>
-#include<string>
+#include <iostream>
+#include <string>
 
-#include"authorize.h"
-#include "FDMgr.h"
-#include "config.h"
-#include "util.h"
+#include "./include/authorize.h"
+#include "./include/FDMgr.h"
+#include "./include/config.h"
+#include "./include/util.h"
+#include "./include/disksql.h"
+
 #include "configor/json.hpp"
 
 using namespace std;
@@ -99,7 +101,7 @@ void login()
                 {
                     // split user information from string
                     // (username, password)
-                    cout<< buffer << endl;
+                    cout << buffer << endl;
                     vector<string> params = split(string(buffer), ' ');
                     info->username = params[0];
                     info->password = params[1];
@@ -113,9 +115,15 @@ void login()
             // return result
             else
             {
+                User user;
+                string id("-1"), cookie("-1");
+                int res = user.login(info->username, info->password, id, cookie);
                 json j;
                 j["ack"] = 1;
-                j["cookie"] = "it's a cookie";
+                j["res"] = res;
+                j["cookie"] = cookie;
+                UserFile user_file(atoi(id.c_str()));
+                j["file_tree"] = user_file.get_file_tree();
                 string j_str = j.dump();
                 write(info->fd, j_str.c_str(), j_str.length());
                 writeLog(getNowTime(), " write to ", info->fd, "(fd) ", j_str.length(), " bytes.");
@@ -202,10 +210,10 @@ void registerAccount()
             // return result
             else
             {
-                // writeDB(info->username, info->password);
-
+                User user;
                 json j;
                 j["ack"] = 1;
+                j["res"] = user.user_register(info->username, info->password);
                 string j_str = j.dump();
                 write(info->fd, j_str.c_str(), j_str.length());
                 writeLog(getNowTime(), " write to ", info->fd, "(fd) ", j_str.length(), " bytes.");

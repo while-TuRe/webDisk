@@ -9,7 +9,6 @@
 #include <tuple>
 #include<unistd.h>
 #include<ctime>
-// #include<Windows.h>
 
 using namespace std;
 using namespace std::this_thread;

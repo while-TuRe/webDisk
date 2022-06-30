@@ -5,12 +5,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <tuple>
-#include "config.h"
-#include "util.h"
+#include "./include/config.h"
+#include "./include/util.h"
 
 recursive_mutex mtx;
 
-ofstream log_file(log_path, ios::app);
+ofstream log_file("./web_disk.log", ios::app);
 
 string getNowTime()
 {

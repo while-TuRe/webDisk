@@ -20,10 +20,11 @@
 #include <signal.h>
 #include <sys/socket.h>
 
-#include "webFrame.h"
-#include "FDMgr.h"
-#include "config.h"
-#include "util.h"
+#include "./include/webFrame.h"
+#include "./include/FDMgr.h"
+#include "./include/config.h"
+#include "./include/util.h"
+#include "./include/disksql.h"
 
 using namespace std;
 using namespace std::this_thread;
@@ -36,7 +37,6 @@ void WebFrame::startService(int client_fd, string request_type)
         writeLog(getNowTime(), " request type not found, type is ", request_type);
         return;
     }
-    
     fd_mgr.addFd(transaction_threads[request_type], client_fd);
 }
 
@@ -57,7 +57,6 @@ WebFrame::~WebFrame()
 
 void WebFrame::setNonblock(int fd)
 {
-    cout << "set " <<fd << " nonblock" << endl;
     int flag = fcntl(fd, F_GETFL, 0);
     if (fcntl(fd, F_SETFL, flag | O_NONBLOCK) < 0)
     {
@@ -67,14 +66,22 @@ void WebFrame::setNonblock(int fd)
 
 bool WebFrame::verifyID(vector<string> &header)
 {
-    if (header[0] == "register")
+    if (header[0] == "register" || header[0] == "login")
         return true;
     // (type, token)
     else
     {
-        // TO-DO
-
-        return true;
+        User user;
+        if (user.get_id_by_token(header[1]) == to_string(-1))
+        {
+            writeLog(getNowTime(), " validation failed");
+            return false;
+        }
+        else
+        {
+            writeLog(getNowTime(), " validation successfully");
+            return true;
+        }
     }
 }
 
@@ -155,6 +162,11 @@ void WebFrame::init()
         exit(-1);
     }
 
+    if (log_file.fail())
+    {
+        cerr << "can't open log file, errno:" << strerror(errno) << endl;
+    }
+
     signal(SIGPIPE, [](int sig) {});
 }
 
@@ -222,6 +234,7 @@ void WebFrame::run()
                 epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
                 if (read_len > 0 && read_len < request_type_max_size)
                 {
+                    cout << "request type:" << request_type << endl;
                     writeLog(getNowTime(), " request type of client:", string(request_type));
                     vector<string> header = split(request_type, ' ');
                     if (verifyID(header))

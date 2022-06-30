@@ -7,10 +7,10 @@
 #include <fstream>
 #include <unordered_map>
 
-#include "FDMgr.h"
-#include "download.h"
-#include "config.h"
-#include "util.h"
+#include "./include/FDMgr.h"
+#include "./include/download.h"
+#include "./include/config.h"
+#include "./include/util.h"
 
 /*
 struct DownloadInfo
@@ -60,6 +60,7 @@ void download()
         DownloadInfo *info = new (nothrow) DownloadInfo;
         info->fd = fd_mgr.popFront();
         event.data.ptr = info;
+        cout << "download get fd:" << info->fd << endl;
         if (epoll_ctl(download_helper.epoll_fd, EPOLL_CTL_ADD, info->fd, &event) < 0)
         {
             writeLog(getNowTime(), " epoll_ctr error, errno:", strerror(errno));
@@ -84,10 +85,10 @@ void download()
             if (events[i].events & EPOLLIN)
             {
                 int client_fd = info->fd;
-                // maybe it's not required
                 epoll_ctl(download_helper.epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
-
+                cout <<  "ready to read" << endl;
                 int read_len = read(client_fd, buffer, buffer_size);
+                cout << "readlen:" << read_len << endl;
                 // read error
                 if (read_len < 0)
                 {
@@ -110,11 +111,13 @@ void download()
                 else
                 {
                     // split file information from string
-                    // (md5, start_pos, end_pos)
+                    // (md5, start_pos, length)
+                    cout << buffer << endl;
                     vector<string> params = split(string(buffer), ' ');
+                    cout<< "params[0]:" << params[0] << endl;
+                    writeLog(getNowTime(), " ", info->fd, " download ", params[0]);
 
-                    info->i_file.open("webrtc.log", ios::binary);
-                    // info->i_file.open(params[0], ios::binary);
+                    info->i_file.open(file_path + params[0], ios::binary);
 
                     // can't open
                     if (info->i_file.fail())
@@ -169,6 +172,7 @@ void download()
                     // send all successfully, close fd.
                     if (info->start_pos >= info->end_pos)
                     {
+                        writeLog(getNowTime(), " ", info->fd, " download file successfully");
                         download_helper.closeDownloadFd(info);
                     }
                 }

@@ -1,16 +1,14 @@
 #include<iostream>
-#include<thread>
+#include<fstream>
 #include<unistd.h>
-
+#include<errno.h>
+#include<cstring>
+#include"util.h"
 using namespace std;
-using namespace std::this_thread;
 
 
-void f(thread::id tid) {
-    cout << tid << endl;
-}
 
 // int main() {
-//     thread::id tid = get_id();
-//     f(tid);
+// cout << file_path << endl;
+
 // }

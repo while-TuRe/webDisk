@@ -1,0 +1,72 @@
+from multiprocessing import Process
+import sys
+from socketServer import start
+import asyncio
+from flask import Flask, render_template
+import os
+
+app = Flask(__name__, template_folder='templates', static_folder='./static')
+
+
+@app.route('/')
+def index():
+    return render_template('record.html', ip=args['--ip'], socket_port=args['--socket_port'])
+    # return render_template('login.html')
+
+
+@app.route('/record')
+def record():
+    return render_template('index.html', ip=args['--ip'], socket_port=args['--socket_port'])
+    # return render_template('record.html', ip=args['--ip'], socket_port=args['--socket_port'])
+
+
+def startSocketServer():
+    asyncio.run(start(args['--ip'], args['--socket_port']))
+
+
+def readArgs(argv) -> dict:
+    args = {}
+    argv = argv
+    if len(argv) % 2 == 0:
+        print('args not enough')
+        sys.exit(-1)
+    for i in range(1, len(argv), 2):
+        args[argv[i]] = argv[i + 1]
+    return args
+
+
+def checkExist(arg_name, arg_value):
+    if arg_value is None:
+        print('no ', arg_name)
+
+
+def daemonize():
+    pid = os.fork()
+    if pid:
+        sys.exit(0)
+    os.umask(0)
+    os.setsid()
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+args={}
+# args = readArgs(sys.argv)
+ip = '0.0.0.0'
+server_port = 10000
+socket_port = 11000
+args['--ip'] = ip
+args['--socket_port'] = socket_port
+
+# ip = args['--ip']
+# server_port = args['--server_port']
+# socket_port = args['--socket_port']
+
+checkExist('ip', ip)
+checkExist('server port', server_port)
+checkExist('socket port', socket_port)
+
+if __name__ == '__main__':
+    # daemonize()
+    Process(target=startSocketServer, daemon=True).start()
+    app.run(host=ip, port=server_port)
+
